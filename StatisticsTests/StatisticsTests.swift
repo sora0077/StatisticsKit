@@ -111,11 +111,13 @@ class StatisticsTests: XCTestCase {
             Statistics.launch(with: backend) { _ in
                 flag = true
             }
+            XCTAssertEqual(Statistics.shared.previous, Statistics.Version(major: 1, minor: 0, patch: 1))
             XCTAssertTrue(flag)
             flag = false
             Statistics.launch(with: backend) { _ in
                 flag = true
             }
+            XCTAssertEqual(Statistics.shared.previous, Statistics.Version(major: 1, minor: 0, patch: 1))
             XCTAssertFalse(flag)
         }
         do {
@@ -126,6 +128,21 @@ class StatisticsTests: XCTestCase {
                 flag = true
             }
             XCTAssertFalse(flag)
+        }
+        do {
+            var flag = false
+            do {
+                let backend = MockBackend(["_Statistics::version": "1.0.0"])
+                Statistics.version = "1.0.1"
+                try Statistics.launch(with: backend) { _ in
+                    throw NSError(domain: "", code: 0, userInfo: nil)
+                }
+                XCTFail()
+            } catch {
+                flag = true
+            }
+            XCTAssertEqual(Statistics.shared.previous, Statistics.Version(major: 1, minor: 0, patch: 0))
+            XCTAssert(flag)
         }
     }
     

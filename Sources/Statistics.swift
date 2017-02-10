@@ -20,50 +20,60 @@ private func bundleLoader(forKey key: String) -> String {
     return Bundle.main.object(forInfoDictionaryKey: key) as? String ?? ""
 }
 
+private let versionKey = "_Statistics::version"
+
 public final class Statistics {
     public struct Data {
         private init() {}
     }
     private(set) var backend: Backend
-    private let current: Version
-    private let previous: Version?
+    let current: Version
+    var previous: Version? {
+        return backend.read(forKey: versionKey).flatMap(Version.init(semanticVersioningString:))
+    }
     
     static var version: String = bundleLoader(forKey: "CFBundleShortVersionString")
     private(set) static var shared: Statistics!
     
     private init(backend: Backend, version: String) {
-        let versionKey = "_Statistics::version"
-        
         self.backend = backend
         current = Version(semanticVersioningString: version)!
-        previous = backend.read(forKey: versionKey).flatMap(Version.init(semanticVersioningString:))
-        backend.write(current.description, forKey: versionKey)
     }
     
     func _key(_ key: String) -> String {
         return "Statistics::\(current)::\(key)"
     }
     
-    public static func launch(with backend: Backend, updated: (_ old: Version?) -> Void = { _ in }) {
-        shared = Statistics(backend: backend, version: version)
-        if let old = shared.previous {
-            if shared.current > old {
-                updated(old)
+    private func checkUpdate(once: (_ old: Version?) throws -> Void) rethrows {
+        if let old = previous {
+            if current > old {
+                try once(old)
             }
         } else {
-            updated(nil)
+            try once(nil)
         }
+        backend.write(current.description, forKey: versionKey)
     }
     
-    static func update<D: StatisticsData>(_ data: D.Type) {
+    public static func launch(with backend: Backend, updated: (_ old: Version?) throws -> Void = { _ in }) rethrows {
+        shared = Statistics(backend: backend, version: version)
+        try shared.checkUpdate(once: updated)
+    }
+    
+    public static func launch(with backend: Backend, updated: (_ old: Version?) -> Void = { _ in }) {
+        shared = Statistics(backend: backend, version: version)
+        shared.checkUpdate(once: updated)
+    }
+    
+    public static func update<D: StatisticsData>(_ data: D.Type) {
         shared.backend.update(data, forKey: shared._key(data.key))
     }
     
-    static func reset() {
+    public static func reset() {
         shared.backend.removeAll()
     }
     
-    static func reset<D: StatisticsData>(for data: D.Type) {
+    public static func reset<D: StatisticsData>(for data: D.Type) {
         shared.backend.remove(forKey: shared._key(data.key))
     }
 }
