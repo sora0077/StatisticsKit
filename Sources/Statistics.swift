@@ -36,13 +36,7 @@ public final class Statistics {
         
         self.backend = backend
         current = Version(semanticVersioningString: version)!
-        previous = {
-            guard let versionString = backend.read(forKey: versionKey) as String?,
-                let version = Version(semanticVersioningString: versionString) else {
-                    return nil
-            }
-            return version
-        }()
+        previous = backend.read(forKey: versionKey).flatMap(Version.init(semanticVersioningString:))
         backend.write(current.description, forKey: versionKey)
     }
     
