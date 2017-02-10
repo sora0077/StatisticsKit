@@ -106,6 +106,11 @@ class StatisticsTests: XCTestCase {
                 flag = true
             }
             XCTAssertTrue(flag)
+            flag = false
+            Statistics.launch(with: backend) { _ in
+                flag = true
+            }
+            XCTAssertFalse(flag)
         }
         do {
             let backend = MockBackend(["_Statistics::version": "1.0.0"])
