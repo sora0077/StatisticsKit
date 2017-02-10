@@ -45,12 +45,9 @@ public final class Statistics {
     }
     
     private func checkUpdate(once: (_ old: Version?) throws -> Void) rethrows {
-        if let old = previous {
-            if current > old {
-                try once(old)
-            }
-        } else {
-            try once(nil)
+        guard let old = previous, current <= old else {
+            try once(previous)
+            return
         }
         backend.write(current.description, forKey: versionKey)
     }
