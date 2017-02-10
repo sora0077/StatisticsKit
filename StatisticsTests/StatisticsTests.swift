@@ -29,7 +29,9 @@ final class MockBackend: Backend {
     }
     
     func removeAll() {
-        hash.removeAll()
+        for key in hash.keys where key.hasPrefix("Statistics") {
+            hash.removeValue(forKey: key)
+        }
     }
 }
 
@@ -37,6 +39,10 @@ private extension Statistics.Data {
     struct LaunchCount: StatisticsData {
         public typealias Value = IncrementalValueController
         public static let key = "launchCount"
+    }
+    struct OtherCount: StatisticsData {
+        public typealias Value = IncrementalValueController
+        public static let key = "otherCount"
     }
 }
 
@@ -128,20 +134,26 @@ class StatisticsTests: XCTestCase {
         Statistics.version = "1.0.0"
         Statistics.launch(with: backend)
         Statistics.update(Statistics.Data.LaunchCount.self)
+        Statistics.update(Statistics.Data.OtherCount.self)
         XCTAssertEqual(Statistics.Data.LaunchCount.value, 1)
+        XCTAssertNotNil(Statistics.Data.OtherCount.value)
         
         Statistics.reset(for: Statistics.Data.LaunchCount.self)
         XCTAssertNil(Statistics.Data.LaunchCount.value)
+        XCTAssertNotNil(Statistics.Data.OtherCount.value)
     }
     
     func testRemoveDataAll() {
         let backend = MockBackend()
         Statistics.version = "1.0.0"
         Statistics.launch(with: backend)
+        backend.write("other", forKey: "otherkey")
         Statistics.update(Statistics.Data.LaunchCount.self)
         XCTAssertEqual(Statistics.Data.LaunchCount.value, 1)
+        XCTAssertNotNil(backend.read(forKey: "otherkey") as String?)
         
         Statistics.reset()
         XCTAssertNil(Statistics.Data.LaunchCount.value)
+        XCTAssertNotNil(backend.read(forKey: "otherkey") as String?)
     }
 }
