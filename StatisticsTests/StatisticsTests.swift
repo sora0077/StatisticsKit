@@ -33,13 +33,11 @@ final class MockBackend: Backend {
     }
 }
 
-private struct LaunchCount: StatisticsData {
-    public typealias Value = IncrementalValueController
-    public static let key = "launchCount"
-}
-
 private extension Statistics.Data {
-    static var launchCount: LaunchCount.Type { return LaunchCount.self }
+    struct LaunchCount: StatisticsData {
+        public typealias Value = IncrementalValueController
+        public static let key = "launchCount"
+    }
 }
 
 
@@ -72,31 +70,31 @@ class StatisticsTests: XCTestCase {
     
     func testLaunchCount() {
         let backend = MockBackend()
-        XCTAssertEqual(Statistics.Data.launchCount.value ?? 0, 0)
+        XCTAssertEqual(Statistics.Data.LaunchCount.value ?? 0, 0)
         Statistics.version = "1.0.0"
         Statistics.launch(with: backend)
-        Statistics.update(LaunchCount.self)
-        XCTAssertEqual(Statistics.Data.launchCount.value, 1)
+        Statistics.update(Statistics.Data.LaunchCount.self)
+        XCTAssertEqual(Statistics.Data.LaunchCount.value, 1)
         
         Statistics.version = "1.0.0"
         Statistics.launch(with: backend)
-        Statistics.update(LaunchCount.self)
-        XCTAssertEqual(Statistics.Data.launchCount.value, 2)
+        Statistics.update(Statistics.Data.LaunchCount.self)
+        XCTAssertEqual(Statistics.Data.LaunchCount.value, 2)
         
         Statistics.version = "1.0.1"
         Statistics.launch(with: backend)
-        Statistics.update(LaunchCount.self)
-        XCTAssertEqual(Statistics.Data.launchCount.value, 1)
+        Statistics.update(Statistics.Data.LaunchCount.self)
+        XCTAssertEqual(Statistics.Data.LaunchCount.value, 1)
         
         Statistics.version = "1.0.2"
         Statistics.launch(with: backend)
-        Statistics.update(LaunchCount.self)
-        XCTAssertEqual(Statistics.Data.launchCount.value, 1)
+        Statistics.update(Statistics.Data.LaunchCount.self)
+        XCTAssertEqual(Statistics.Data.LaunchCount.value, 1)
         
         Statistics.version = "1.0.2"
         Statistics.launch(with: backend)
-        Statistics.update(LaunchCount.self)
-        XCTAssertEqual(Statistics.Data.launchCount.value, 2)
+        Statistics.update(Statistics.Data.LaunchCount.self)
+        XCTAssertEqual(Statistics.Data.LaunchCount.value, 2)
     }
     
     func testUpdateClosure() {
