@@ -117,4 +117,26 @@ class StatisticsTests: XCTestCase {
             XCTAssertFalse(flag)
         }
     }
+    
+    func testRemoveData() {
+        let backend = MockBackend()
+        Statistics.version = "1.0.0"
+        Statistics.launch(with: backend)
+        Statistics.update(Statistics.Data.LaunchCount.self)
+        XCTAssertEqual(Statistics.Data.LaunchCount.value, 1)
+        
+        Statistics.reset(for: Statistics.Data.LaunchCount.self)
+        XCTAssertNil(Statistics.Data.LaunchCount.value)
+    }
+    
+    func testRemoveDataAll() {
+        let backend = MockBackend()
+        Statistics.version = "1.0.0"
+        Statistics.launch(with: backend)
+        Statistics.update(Statistics.Data.LaunchCount.self)
+        XCTAssertEqual(Statistics.Data.LaunchCount.value, 1)
+        
+        Statistics.reset()
+        XCTAssertNil(Statistics.Data.LaunchCount.value)
+    }
 }
