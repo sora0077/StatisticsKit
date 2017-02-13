@@ -45,10 +45,13 @@ public final class Statistics {
     }
     
     private func checkUpdate(once: (_ old: Version?) throws -> Void) rethrows {
-        guard let old = previous, current <= old else {
-            try once(previous)
-            return
+        func doOnceIfNeeded(_ closure: (Version?) throws -> Void) rethrows {
+            guard let old = previous, current <= old else {
+                try closure(previous)
+                return
+            }
         }
+        try doOnceIfNeeded(once)
         backend.write(current.description, forKey: versionKey)
     }
     
@@ -62,8 +65,8 @@ public final class Statistics {
         shared.checkUpdate(once: updated)
     }
     
-    public static func update<D: StatisticsData>(_ data: D.Type) {
-        shared.backend.update(data, forKey: shared._key(data.key))
+    public static func update<D: StatisticsData>(_ data: D) {
+        shared.backend.update(data, forKey: shared._key(type(of: data).key))
     }
     
     public static func reset() {
@@ -76,7 +79,7 @@ public final class Statistics {
 }
 
 private extension Backend {
-    func update<D: StatisticsData>(_ data: D.Type, forKey key: String) {
-        write(data.Value.updated(old: read(forKey: key)), forKey: key)
+    func update<D: StatisticsData>(_ data: D, forKey key: String) {
+        write(data.update(old: read(forKey: key)), forKey: key)
     }
 }

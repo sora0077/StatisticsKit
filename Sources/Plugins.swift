@@ -8,26 +8,14 @@
 
 import Foundation
 
-public protocol ValueController {
-    associatedtype ValueType
-    static func updated(old: ValueType?) -> ValueType?
-}
-
-public struct IncrementalValueController: ValueController {
-    public typealias ValueType = Int
-    
-    public static func updated(old: Int?) -> Int? {
-        return (old ?? 0) + 1
-    }
-}
-
 public protocol StatisticsData {
-    associatedtype Value: ValueController
+    associatedtype Value
     static var key: String { get }
+    func update(old: Value?) -> Value?
 }
 
 extension StatisticsData {
-    public static var value: Value.ValueType? {
+    public static var value: Value? {
         guard let _key = Statistics.shared?._key(key) else { return nil }
         return Statistics.shared?.backend.read(forKey: _key)
     }

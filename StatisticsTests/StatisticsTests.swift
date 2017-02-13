@@ -37,12 +37,17 @@ final class MockBackend: Backend {
 
 private extension Statistics.Data {
     struct LaunchCount: StatisticsData {
-        public typealias Value = IncrementalValueController
         public static let key = "launchCount"
+        func update(old: Int?) -> Int? {
+            return (old ?? 0) + 1
+        }
     }
     struct OtherCount: StatisticsData {
-        public typealias Value = IncrementalValueController
         public static let key = "otherCount"
+        let data: String
+        fileprivate func update(old: String?) -> String? {
+            return data
+        }
     }
 }
 
@@ -79,27 +84,27 @@ class StatisticsTests: XCTestCase {
         XCTAssertEqual(Statistics.Data.LaunchCount.value ?? 0, 0)
         Statistics.version = "1.0.0"
         Statistics.launch(with: backend)
-        Statistics.update(Statistics.Data.LaunchCount.self)
+        Statistics.update(Statistics.Data.LaunchCount())
         XCTAssertEqual(Statistics.Data.LaunchCount.value, 1)
         
         Statistics.version = "1.0.0"
         Statistics.launch(with: backend)
-        Statistics.update(Statistics.Data.LaunchCount.self)
+        Statistics.update(Statistics.Data.LaunchCount())
         XCTAssertEqual(Statistics.Data.LaunchCount.value, 2)
         
         Statistics.version = "1.0.1"
         Statistics.launch(with: backend)
-        Statistics.update(Statistics.Data.LaunchCount.self)
+        Statistics.update(Statistics.Data.LaunchCount())
         XCTAssertEqual(Statistics.Data.LaunchCount.value, 1)
         
         Statistics.version = "1.0.2"
         Statistics.launch(with: backend)
-        Statistics.update(Statistics.Data.LaunchCount.self)
+        Statistics.update(Statistics.Data.LaunchCount())
         XCTAssertEqual(Statistics.Data.LaunchCount.value, 1)
         
         Statistics.version = "1.0.2"
         Statistics.launch(with: backend)
-        Statistics.update(Statistics.Data.LaunchCount.self)
+        Statistics.update(Statistics.Data.LaunchCount())
         XCTAssertEqual(Statistics.Data.LaunchCount.value, 2)
     }
     
@@ -150,10 +155,10 @@ class StatisticsTests: XCTestCase {
         let backend = MockBackend()
         Statistics.version = "1.0.0"
         Statistics.launch(with: backend)
-        Statistics.update(Statistics.Data.LaunchCount.self)
-        Statistics.update(Statistics.Data.OtherCount.self)
+        Statistics.update(Statistics.Data.LaunchCount())
+        Statistics.update(Statistics.Data.OtherCount(data: "data"))
         XCTAssertEqual(Statistics.Data.LaunchCount.value, 1)
-        XCTAssertNotNil(Statistics.Data.OtherCount.value)
+        XCTAssertEqual(Statistics.Data.OtherCount.value, "data")
         
         Statistics.reset(for: Statistics.Data.LaunchCount.self)
         XCTAssertNil(Statistics.Data.LaunchCount.value)
@@ -165,7 +170,7 @@ class StatisticsTests: XCTestCase {
         Statistics.version = "1.0.0"
         Statistics.launch(with: backend)
         backend.write("other", forKey: "otherkey")
-        Statistics.update(Statistics.Data.LaunchCount.self)
+        Statistics.update(Statistics.Data.LaunchCount())
         XCTAssertEqual(Statistics.Data.LaunchCount.value, 1)
         XCTAssertNotNil(backend.read(forKey: "otherkey") as String?)
         
