@@ -9,11 +9,21 @@
 import XCTest
 @testable import StatisticsKit
 
+struct MockHost: ApplicationHost {
+    var currentVersion: String
+}
+
 final class MockBackend: Backend {
+    var latestVersion: String?
     private var hash: [String: Any]
     
-    init(_ defaults: [String: Any] = [:]) {
+    init(_ version: String? = nil, _ defaults: [String: Any] = [:]) {
+        latestVersion = version
         hash = defaults
+    }
+    
+    func update(version: String) {
+        latestVersion = version
     }
     
     func write<T>(_ value: T?, forKey key: String) {
@@ -82,79 +92,71 @@ class StatisticsTests: XCTestCase {
     func testLaunchCount() {
         let backend = MockBackend()
         XCTAssertEqual(Statistics.Data.LaunchCount.value ?? 0, 0)
-        Statistics.version = "1.0.0"
-        Statistics.launch(with: backend)
+        Statistics.launch(with: backend, host: MockHost(currentVersion: "1.0.0"))
         Statistics.update(Statistics.Data.LaunchCount())
         XCTAssertEqual(Statistics.Data.LaunchCount.value, 1)
         
-        Statistics.version = "1.0.0"
-        Statistics.launch(with: backend)
+        Statistics.launch(with: backend, host: MockHost(currentVersion: "1.0.0"))
         Statistics.update(Statistics.Data.LaunchCount())
         XCTAssertEqual(Statistics.Data.LaunchCount.value, 2)
         
-        Statistics.version = "1.0.1"
-        Statistics.launch(with: backend)
+        Statistics.launch(with: backend, host: MockHost(currentVersion: "1.0.1"))
         Statistics.update(Statistics.Data.LaunchCount())
         XCTAssertEqual(Statistics.Data.LaunchCount.value, 1)
         
-        Statistics.version = "1.0.2"
-        Statistics.launch(with: backend)
+        Statistics.launch(with: backend, host: MockHost(currentVersion: "1.0.2"))
         Statistics.update(Statistics.Data.LaunchCount())
         XCTAssertEqual(Statistics.Data.LaunchCount.value, 1)
         
-        Statistics.version = "1.0.2"
-        Statistics.launch(with: backend)
+        Statistics.launch(with: backend, host: MockHost(currentVersion: "1.0.2"))
         Statistics.update(Statistics.Data.LaunchCount())
         XCTAssertEqual(Statistics.Data.LaunchCount.value, 2)
     }
     
     func testUpdateClosure() {
         do {
-            let backend = MockBackend(["_Statistics::version": "1.0.0"])
+            let backend = MockBackend("1.0.0")
             var flag = false
-            Statistics.version = "1.0.1"
-            Statistics.launch(with: backend) { _ in
+            Statistics.launch(with: backend, host: MockHost(currentVersion: "1.0.1")) { _ in
                 flag = true
             }
-            XCTAssertEqual(Statistics.shared.previous, Statistics.Version(major: 1, minor: 0, patch: 1))
+            XCTAssertEqual(backend.latestVersion, "1.0.1")
             XCTAssertTrue(flag)
             flag = false
-            Statistics.launch(with: backend) { _ in
+            Statistics.launch(with: backend, host: MockHost(currentVersion: "1.0.1")) { _ in
                 flag = true
             }
-            XCTAssertEqual(Statistics.shared.previous, Statistics.Version(major: 1, minor: 0, patch: 1))
+            XCTAssertEqual(backend.latestVersion, "1.0.1")
             XCTAssertFalse(flag)
         }
         do {
-            let backend = MockBackend(["_Statistics::version": "1.0.0"])
+            let backend = MockBackend("1.0.0")
             var flag = false
-            Statistics.version = "1.0.0"
-            Statistics.launch(with: backend) { _ in
+            Statistics.launch(with: backend, host: MockHost(currentVersion: "1.0.0")) { _ in
                 flag = true
             }
             XCTAssertFalse(flag)
         }
         do {
+            var backend: MockBackend?
             var flag = false
             do {
-                let backend = MockBackend(["_Statistics::version": "1.0.0"])
-                Statistics.version = "1.0.1"
-                try Statistics.launch(with: backend) { _ in
+                backend = MockBackend("1.0.0")
+                try Statistics.launch(with: backend!, host: MockHost(currentVersion: "1.0.1")) { _ in
                     throw NSError(domain: "", code: 0, userInfo: nil)
                 }
                 XCTFail()
             } catch {
                 flag = true
             }
-            XCTAssertEqual(Statistics.shared.previous, Statistics.Version(major: 1, minor: 0, patch: 0))
+            XCTAssertEqual(backend?.latestVersion, "1.0.0")
             XCTAssert(flag)
         }
     }
     
     func testRemoveData() {
         let backend = MockBackend()
-        Statistics.version = "1.0.0"
-        Statistics.launch(with: backend)
+        Statistics.launch(with: backend, host: MockHost(currentVersion: "1.0.0"))
         Statistics.update(Statistics.Data.LaunchCount())
         Statistics.update(Statistics.Data.OtherCount(data: "data"))
         XCTAssertEqual(Statistics.Data.LaunchCount.value, 1)
@@ -167,8 +169,7 @@ class StatisticsTests: XCTestCase {
     
     func testRemoveDataAll() {
         let backend = MockBackend()
-        Statistics.version = "1.0.0"
-        Statistics.launch(with: backend)
+        Statistics.launch(with: backend, host: MockHost(currentVersion: "1.0.0"))
         backend.write("other", forKey: "otherkey")
         Statistics.update(Statistics.Data.LaunchCount())
         XCTAssertEqual(Statistics.Data.LaunchCount.value, 1)

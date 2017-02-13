@@ -8,11 +8,21 @@
 
 import Foundation
 
+private let versionKey = "_Statistics::version"
+
 public struct UserDefaultsBackend: Backend {
     private let defaults: UserDefaults
     
     public init(defaults: UserDefaults = UserDefaults.standard) {
         self.defaults = defaults
+    }
+    
+    public var latestVersion: String? {
+        return defaults.string(forKey: versionKey)
+    }
+    
+    public func update(version: String) {
+        write(version, forKey: versionKey)
     }
     
     public func write<T>(_ value: T?, forKey key: String) {

@@ -13,10 +13,3 @@ public protocol StatisticsData {
     static var key: String { get }
     func update(old: Value?) -> Value?
 }
-
-extension StatisticsData {
-    public static var value: Value? {
-        guard let _key = Statistics.shared?._key(key) else { return nil }
-        return Statistics.shared?.backend.read(forKey: _key)
-    }
-}

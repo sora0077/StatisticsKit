@@ -8,16 +8,25 @@
 
 import Foundation
 
+public protocol ApplicationHost {
+    var currentVersion: String { get }
+}
+
+public extension ApplicationHost {
+    var currentVersion: String {
+        return Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+    }
+}
+
 public protocol Backend {
+    var latestVersion: String? { get }
+    func update(version: String)
+
     func write<T>(_ value: T?, forKey key: String)
     func read<T>(forKey key: String) -> T?
     
     func remove(forKey key: String)
     func removeAll()
-}
-
-private func bundleLoader(forKey key: String) -> String {
-    return Bundle.main.object(forInfoDictionaryKey: key) as? String ?? ""
 }
 
 private let versionKey = "_Statistics::version"
@@ -29,11 +38,9 @@ public final class Statistics {
     private(set) var backend: Backend
     let current: Version
     var previous: Version? {
-        return backend.read(forKey: versionKey).flatMap(Version.init(semanticVersioningString:))
+        return backend.latestVersion.flatMap(Version.init(semanticVersioningString:))
     }
-    
-    static var version: String = bundleLoader(forKey: "CFBundleShortVersionString")
-    private(set) static var shared: Statistics!
+    fileprivate private(set) static var shared: Statistics!
     
     private init(backend: Backend, version: String) {
         self.backend = backend
@@ -52,16 +59,16 @@ public final class Statistics {
             }
         }
         try doOnceIfNeeded(once)
-        backend.write(current.description, forKey: versionKey)
+        backend.update(version: current.description)
     }
     
-    public static func launch(with backend: Backend, updated: (_ old: Version?) throws -> Void = { _ in }) rethrows {
-        shared = Statistics(backend: backend, version: version)
+    public static func launch(with backend: Backend, host: ApplicationHost, updated: (_ old: Version?) throws -> Void = { _ in }) rethrows {
+        shared = Statistics(backend: backend, version: host.currentVersion)
         try shared.checkUpdate(once: updated)
     }
     
-    public static func launch(with backend: Backend, updated: (_ old: Version?) -> Void = { _ in }) {
-        shared = Statistics(backend: backend, version: version)
+    public static func launch(with backend: Backend, host: ApplicationHost, updated: (_ old: Version?) -> Void = { _ in }) {
+        shared = Statistics(backend: backend, version: host.currentVersion)
         shared.checkUpdate(once: updated)
     }
     
@@ -81,5 +88,12 @@ public final class Statistics {
 private extension Backend {
     func update<D: StatisticsData>(_ data: D, forKey key: String) {
         write(data.update(old: read(forKey: key)), forKey: key)
+    }
+}
+
+extension StatisticsData {
+    public static var value: Value? {
+        guard let _key = Statistics.shared?._key(key) else { return nil }
+        return Statistics.shared?.backend.read(forKey: _key)
     }
 }
